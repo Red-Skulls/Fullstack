@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Healthcare Records &amp; Interop Viewer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide-static/0.400.0/font/lucide.min.css" onerror="this.remove()">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --paper:#F4F6F5; --panel:#FFFFFF; --ink:#1B2430; --ink-soft:#5B6670; --ink-faint:#8B949B;
+    --line:#DCE1E0; --line-soft:#EAEDEC; --teal:#2C6E63; --teal-deep:#1E4D45; --teal-tint:#E4EFEC;
+    --amber:#8B5E34; --brick:#A6362F; --badge:#EEF0F1;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;background:#EEF1F0;padding:28px;color:var(--ink);}
+  #app{max-width:1080px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .banner{background:var(--teal-deep);color:#EFF5F3;text-align:center;font-size:13px;padding:7px 16px;}
+  .layout{display:grid;grid-template-columns:260px 1fr;min-height:600px;}
+  .sidebar{background:var(--panel);border-right:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:24px;}
+  .label{color:var(--ink-faint);font-size:11px;font-weight:500;margin-bottom:8px;}
+  .role-btn{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;padding:8px 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--ink-soft);text-align:left;cursor:pointer;width:100%;margin-bottom:6px;transition:background .15s;}
+  .role-btn.active{background:var(--teal-tint);color:var(--teal-deep);border-color:var(--teal);}
+  .role-blurb{color:var(--ink-faint);font-size:11.5px;line-height:1.5;margin-top:10px;padding:0 2px;}
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:10px;}
+  .search input{border:none;outline:none;background:transparent;font-size:12.5px;width:100%;color:var(--ink);}
+  .patient-btn{text-align:left;border-radius:8px;padding:8px 10px;background:transparent;border:none;cursor:pointer;width:100%;margin-bottom:4px;}
+  .patient-btn.active{background:var(--badge);}
+  .patient-name{font-size:13px;font-weight:500;color:var(--ink);}
+  .patient-mrn{font-size:11.5px;color:var(--ink-faint);}
+  .main{padding:24px;}
+  .p-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+  .p-name{font-family:'Source Serif 4',serif;font-size:26px;font-weight:600;margin:0;line-height:1.2;}
+  .p-meta{color:var(--ink-soft);font-size:13px;margin-top:6px;display:flex;gap:10px;align-items:center;}
+  .p-meta .dot{color:var(--line);}
+  .role-pill{background:var(--teal-tint);color:var(--teal-deep);font-size:11.5px;padding:4px 10px;border-radius:999px;font-weight:500;white-space:nowrap;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+  .stat-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px;}
+  .stat-label{color:var(--ink-faint);font-size:11px;margin-bottom:4px;}
+  .stat-value{font-size:19px;font-weight:500;}
+  .stat-value.small{font-size:13px;font-weight:500;margin-top:6px;}
+  .tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:20px;}
+  .tab-btn{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:var(--ink-faint);background:none;border:none;border-bottom:2px solid transparent;padding-bottom:10px;cursor:pointer;}
+  .tab-btn.active{color:var(--teal-deep);border-color:var(--teal);}
+  .filters{display:flex;gap:8px;margin-bottom:20px;}
+  .filter-chip{font-size:12.5px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);cursor:pointer;}
+  .filter-chip.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .timeline{border-left:2px solid var(--line-soft);margin-left:6px;padding-left:24px;display:flex;flex-direction:column;gap:20px;}
+  .t-item{position:relative;}
+  .t-dot{position:absolute;top:6px;left:-30.5px;width:10px;height:10px;border-radius:999px;}
+  .t-date{color:var(--ink-faint);font-size:11.5px;margin-bottom:2px;}
+  .t-title{font-size:14.5px;font-weight:500;display:flex;align-items:center;gap:8px;}
+  .t-flag{color:var(--brick);font-size:11.5px;font-weight:400;display:inline-flex;align-items:center;gap:4px;}
+  .t-subtitle{color:var(--ink-soft);font-size:13px;margin-top:2px;}
+  .t-note{color:var(--ink-soft);background:var(--line-soft);font-size:12.5px;margin-top:8px;border-radius:6px;padding:8px 10px;line-height:1.5;}
+  .t-locked{color:var(--ink-faint);font-size:12px;margin-top:6px;display:flex;align-items:center;gap:6px;}
+  .empty{color:var(--ink-faint);font-size:13px;}
+  .locked-box{display:flex;gap:10px;align-items:flex-start;background:var(--badge);color:var(--ink-soft);border:1px solid var(--line);border-radius:8px;padding:14px;font-size:13px;line-height:1.5;}
+  .seg-grid{display:grid;grid-template-columns:200px 1fr;gap:20px;}
+  .seg-list{display:flex;flex-direction:column;gap:4px;}
+  .seg-btn{text-align:left;font-size:12.5px;padding:6px 10px;border-radius:6px;background:transparent;border:none;color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  .seg-btn.active{background:var(--teal-tint);color:var(--teal-deep);}
+  .seg-viewer{background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:16px;overflow-x:auto;font-family:'IBM Plex Mono',monospace;}
+  .seg-brace{color:#8FB8AE;font-size:12.5px;}
+  .seg-line{font-size:12.5px;line-height:1.7;}
+  .seg-key{color:#8B949B;}
+  .seg-str{color:#7FBBAE;}
+  .seg-num{color:#D8A97E;}
+  .icon{width:14px;height:14px;display:inline-block;vertical-align:-2px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ------------------------------------------------------------------ */
+/* Synthetic dataset — entirely fabricated, structured FHIR-style     */
+/* ------------------------------------------------------------------ */
+const PATIENTS = [
+  { id: "pt-1001", mrn: "MRN-77401", name: "Asha Kulkarni", dob: "1987-03-14", gender: "Female" },
+  { id: "pt-1002", mrn: "MRN-77402", name: "Devraj Menon", dob: "1962-11-02", gender: "Male" },
+  { id: "pt-1003", mrn: "MRN-77403", name: "Priya Chandran", dob: "2001-07-29", gender: "Female" },
+];
+
+const ENCOUNTERS = [
+  { id: "enc-1", patientId: "pt-1001", date: "2026-01-12", type: "Office Visit", reason: "Annual physical", provider: "Dr. N. Fernandes", note: "Patient reports feeling well. No new complaints. Routine bloodwork ordered." },
+  { id: "enc-2", patientId: "pt-1001", date: "2026-04-03", type: "Follow-up", reason: "Elevated glucose review", provider: "Dr. N. Fernandes", note: "Discussed diet and exercise plan. Recheck A1c in 3 months." },
+  { id: "enc-3", patientId: "pt-1002", date: "2025-11-20", type: "Cardiology Consult", reason: "Chest tightness on exertion", provider: "Dr. R. Iyer", note: "Stress test recommended. ECG within normal limits at rest." },
+  { id: "enc-4", patientId: "pt-1002", date: "2026-02-08", type: "Office Visit", reason: "Blood pressure check", provider: "Dr. R. Iyer", note: "BP improved on current regimen. Continue lisinopril." },
+  { id: "enc-5", patientId: "pt-1003", date: "2026-05-19", type: "Office Visit", reason: "Seasonal allergy symptoms", provider: "Dr. S. Okonkwo", note: "Prescribed antihistamine. Symptoms mild, no wheeze." },
+];
+
+const OBSERVATIONS = [
+  { id: "obs-1", patientId: "pt-1001", date: "2026-01-12", name: "Hemoglobin A1c", value: 6.1, unit: "%", range: "4.0–5.6", flag: "high" },
+  { id: "obs-2", patientId: "pt-1001", date: "2026-01-12", name: "LDL Cholesterol", value: 118, unit: "mg/dL", range: "<100", flag: "high" },
+  { id: "obs-3", patientId: "pt-1001", date: "2026-04-03", name: "Hemoglobin A1c", value: 5.8, unit: "%", range: "4.0–5.6", flag: "high" },
+  { id: "obs-4", patientId: "pt-1002", date: "2025-11-20", name: "Resting Heart Rate", value: 78, unit: "bpm", range: "60–100", flag: "normal" },
+  { id: "obs-5", patientId: "pt-1002", date: "2026-02-08", name: "Systolic BP", value: 128, unit: "mmHg", range: "90–120", flag: "high" },
+  { id: "obs-6", patientId: "pt-1002", date: "2026-02-08", name: "Potassium", value: 4.2, unit: "mmol/L", range: "3.5–5.0", flag: "normal" },
+  { id: "obs-7", patientId: "pt-1003", date: "2026-05-19", name: "Eosinophil Count", value: 0.4, unit: "10^9/L", range: "0.0–0.5", flag: "normal" },
+];
+
+const MEDICATIONS = [
+  { id: "med-1", patientId: "pt-1001", date: "2026-04-03", name: "Metformin", dose: "500mg twice daily", status: "Active" },
+  { id: "med-2", patientId: "pt-1002", date: "2025-11-20", name: "Lisinopril", dose: "10mg once daily", status: "Active" },
+  { id: "med-3", patientId: "pt-1002", date: "2025-06-01", name: "Atorvastatin", dose: "20mg nightly", status: "Discontinued" },
+  { id: "med-4", patientId: "pt-1003", date: "2026-05-19", name: "Cetirizine", dose: "10mg once daily", status: "Active" },
+];
+
+const ROLES = [
+  { id: "doctor", label: "Doctor", icon: "stethoscope", blurb: "Full clinical access, including notes and raw record segments." },
+  { id: "nurse", label: "Nurse", icon: "activity", blurb: "Visits, labs, and medications. Clinical notes and raw segments are hidden." },
+  { id: "patient", label: "Patient", icon: "user", blurb: "Own record only, in plain language. No raw segments." },
+  { id: "auditor", label: "Auditor", icon: "shield-alert", blurb: "Interoperability segments and access metadata, no clinical narrative." },
+];
+
+const PERMISSIONS = {
+  doctor: { notes: true, labsDetail: true, segments: true, allPatients: true },
+  nurse: { notes: false, labsDetail: true, segments: false, allPatients: true },
+  patient: { notes: false, labsDetail: true, segments: false, allPatients: false },
+  auditor: { notes: false, labsDetail: false, segments: true, allPatients: true },
+};
+
+/* ------------------------------------------------------------------ */
+/* State                                                               */
+/* ------------------------------------------------------------------ */
+const state = {
+  role: "doctor",
+  query: "",
+  patientId: PATIENTS[0].id,
+  tab: "timeline",
+  timelineFilter: "all",
+  segmentSelected: null,
+};
+
+function esc(str){
+  return String(str).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function getVisiblePatients(){
+  const perms = PERMISSIONS[state.role];
+  let base = perms.allPatients ? PATIENTS : PATIENTS.filter(p => p.id === PATIENTS[0].id);
+  if (state.query.trim()){
+    const q = state.query.toLowerCase();
+    base = base.filter(p => p.name.toLowerCase().includes(q) || p.mrn.toLowerCase().includes(q));
+  }
+  return base;
+}
+
+function buildTimelineItems(patient){
+  const encounters = ENCOUNTERS.filter(e => e.patientId === patient.id);
+  const observations = OBSERVATIONS.filter(o => o.patientId === patient.id);
+  const medications = MEDICATIONS.filter(m => m.patientId === patient.id);
+  const items = [
+    ...encounters.map(e => ({ id: e.id, kind: "visit", date: e.date, title: e.type, subtitle: `${e.reason} · ${e.provider}`, note: e.note, dot: "var(--teal)" })),
+    ...observations.map(o => ({ id: o.id, kind: "lab", date: o.date, title: o.name, subtitle: `${o.value} ${o.unit} · reference ${o.range}`, flag: o.flag, dot: o.flag === "high" ? "var(--brick)" : "var(--amber)" })),
+    ...medications.map(m => ({ id: m.id, kind: "med", date: m.date, title: m.name, subtitle: `${m.dose} · ${m.status}`, dot: "var(--teal-deep)" })),
+  ];
+  items.sort((a,b) => new Date(b.date) - new Date(a.date));
+  return { items, encounters, observations, medications };
+}
+
+function buildSegments(patient, encounters, observations, medications){
+  return [
+    { id: patient.id, resourceType: "Patient", fields: { name: patient.name, gender: patient.gender, birthDate: patient.dob, identifier: patient.mrn } },
+    ...encounters.map(e => ({ id: e.id, resourceType: "Encounter", fields: { subject: patient.id, date: e.date, type: e.type, reasonCode: e.reason, participant: e.provider } })),
+    ...observations.map(o => ({ id: o.id, resourceType: "Observation", fields: { subject: patient.id, effectiveDateTime: o.date, code: o.name, value: o.value, unit: o.unit, referenceRange: o.range, interpretation: o.flag } })),
+    ...medications.map(m => ({ id: m.id, resourceType: "MedicationRequest", fields: { subject: patient.id, authoredOn: m.date, medication: m.name, dosageInstruction: m.dose, status: m.status } })),
+  ];
+}
+
+/* ------------------------------------------------------------------ */
+/* Render                                                              */
+/* ------------------------------------------------------------------ */
+function render(){
+  const perms = PERMISSIONS[state.role];
+  const visiblePatients = getVisiblePatients();
+  if (!visiblePatients.find(p => p.id === state.patientId) && visiblePatients[0]){
+    state.patientId = visiblePatients[0].id;
+  }
+  const patient = visiblePatients.find(p => p.id === state.patientId) || visiblePatients[0];
+
+  const app = document.getElementById("app");
+
+  if (!patient){
+    app.innerHTML = `
+      <div class="banner">Synthetic data · demo interface only — no real patient information is used or stored</div>
+      <div class="layout">${renderSidebar(perms, visiblePatients)}<div class="main"><div class="empty">No matching records.</div></div></div>`;
+    attachEvents();
+    return;
+  }
+
+  const { items, encounters, observations, medications } = buildTimelineItems(patient);
+  const labSummary = perms.labsDetail
+    ? `${observations.length} result${observations.length === 1 ? "" : "s"}, ${observations.filter(o => o.flag === "high").length} out of range`
+    : `${observations.length} result${observations.length === 1 ? "" : "s"} on file`;
+
+  app.innerHTML = `
+    <div class="banner">Synthetic data · demo interface only — no real patient information is used or stored</div>
+    <div class="layout">
+      ${renderSidebar(perms, visiblePatients)}
+      <div class="main">
+        <div class="p-header">
+          <div>
+            <h1 class="p-name">${esc(patient.name)}</h1>
+            <div class="p-meta">
+              <span>${esc(patient.gender)}</span><span class="dot">·</span>
+              <span>DOB ${esc(patient.dob)}</span><span class="dot">·</span>
+              <span>${esc(patient.mrn)}</span>
+            </div>
+          </div>
+          <div class="role-pill">${esc(ROLES.find(r => r.id === state.role).label)} view</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat-card"><div class="stat-label">Visits</div><div class="stat-value">${encounters.length}</div></div>
+          <div class="stat-card"><div class="stat-label">Lab results</div><div class="stat-value small">${esc(labSummary)}</div></div>
+          <div class="stat-card"><div class="stat-label">Active medications</div><div class="stat-value">${medications.filter(m => m.status === "Active").length}</div></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn ${state.tab === "timeline" ? "active" : ""}" data-tab="timeline">Timeline</button>
+          <button class="tab-btn ${state.tab === "segments" ? "active" : ""}" data-tab="segments">Record segments</button>
+        </div>
+
+        ${state.tab === "timeline" ? renderTimeline(items, perms) : renderSegments(perms, patient, encounters, observations, medications)}
+      </div>
+    </div>
+  `;
+  attachEvents();
+}
+
+function renderSidebar(perms, visiblePatients){
+  return `
+    <div class="sidebar">
+      <div>
+        <div class="label">Viewing as</div>
+        ${ROLES.map(r => `
+          <button class="role-btn ${state.role === r.id ? "active" : ""}" data-role="${r.id}">
+            <span>${esc(r.label)}</span>
+          </button>`).join("")}
+        <div class="role-blurb">${esc(ROLES.find(r => r.id === state.role).blurb)}</div>
+      </div>
+      <div>
+        <div class="label">${perms.allPatients ? "Patients" : "Your record"}</div>
+        ${perms.allPatients ? `
+          <div class="search">
+            <input id="searchInput" type="text" placeholder="Search name or MRN" value="${esc(state.query)}" />
+          </div>` : ""}
+        ${visiblePatients.map(p => `
+          <button class="patient-btn ${p.id === state.patientId ? "active" : ""}" data-patient="${p.id}">
+            <div class="patient-name">${esc(p.name)}</div>
+            <div class="patient-mrn">${esc(p.mrn)}</div>
+          </button>`).join("") || `<div class="empty">No matching records.</div>`}
+      </div>
+    </div>`;
+}
+
+function renderTimeline(items, perms){
+  const filters = [
+    { id: "all", label: "All" }, { id: "visit", label: "Visits" },
+    { id: "lab", label: "Labs" }, { id: "med", label: "Medications" },
+  ];
+  const filtered = state.timelineFilter === "all" ? items : items.filter(i => i.kind === state.timelineFilter);
+
+  return `
+    <div class="filters">
+      ${filters.map(f => `<button class="filter-chip ${state.timelineFilter === f.id ? "active" : ""}" data-filter="${f.id}">${f.label}</button>`).join("")}
+    </div>
+    <div class="timeline">
+      ${filtered.length === 0 ? `<div class="empty">No entries for this filter.</div>` : filtered.map(item => `
+        <div class="t-item">
+          <span class="t-dot" style="background:${item.dot}"></span>
+          <div class="t-date">${esc(item.date)}</div>
+          <div class="t-title">${esc(item.title)}
+            ${item.flag === "high" ? `<span class="t-flag">out of range</span>` : ""}
+          </div>
+          ${item.subtitle ? `<div class="t-subtitle">${esc(item.subtitle)}</div>` : ""}
+          ${item.kind === "visit" && item.note ? (
+            perms.notes
+              ? `<div class="t-note">${esc(item.note)}</div>`
+              : `<div class="t-locked">Clinical note hidden for this role</div>`
+          ) : ""}
+        </div>`).join("")}
+    </div>`;
+}
+
+function renderSegments(perms, patient, encounters, observations, medications){
+  if (!perms.segments){
+    const roleLabel = ROLES.find(r => r.id === state.role).label;
+    return `<div class="locked-box">The ${esc(roleLabel)} role doesn't include access to raw record segments. Switch to Doctor or Auditor to view the structured resource data.</div>`;
+  }
+  const resources = buildSegments(patient, encounters, observations, medications);
+  if (!state.segmentSelected || !resources.find(r => r.id === state.segmentSelected)){
+    state.segmentSelected = resources[0]?.id ?? null;
+  }
+  const current = resources.find(r => r.id === state.segmentSelected);
+
+  return `
+    <div class="seg-grid">
+      <div>
+        <div class="label">Resources</div>
+        <div class="seg-list">
+          ${resources.map(r => `
+            <button class="seg-btn ${r.id === state.segmentSelected ? "active" : ""}" data-segment="${r.id}">
+              <span>${esc(r.resourceType)}/${esc(r.id)}</span>
+            </button>`).join("")}
+        </div>
+      </div>
+      <div class="seg-viewer">
+        ${current ? `
+          <div class="seg-brace">{</div>
+          ${Object.entries(current.fields).map(([k,v]) => `
+            <div class="seg-line" style="padding-left:16px">
+              <span class="seg-key">${esc(k)}: </span>
+              ${typeof v === "number" ? `<span class="seg-num">${v}</span>` : `<span class="seg-str">"${esc(v)}"</span>`}
+            </div>`).join("")}
+          <div class="seg-brace" style="margin-top:4px">}</div>
+        ` : `<div class="seg-brace">Select a resource segment.</div>`}
+      </div>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Events                                                              */
+/* ------------------------------------------------------------------ */
+function attachEvents(){
+  document.querySelectorAll("[data-role]").forEach(el => el.addEventListener("click", () => {
+    state.role = el.dataset.role; state.query = ""; state.tab = "timeline"; render();
+  }));
+  document.querySelectorAll("[data-patient]").forEach(el => el.addEventListener("click", () => {
+    state.patientId = el.dataset.patient; state.segmentSelected = null; render();
+  }));
+  document.querySelectorAll("[data-tab]").forEach(el => el.addEventListener("click", () => {
+    state.tab = el.dataset.tab; render();
+  }));
+  document.querySelectorAll("[data-filter]").forEach(el => el.addEventListener("click", () => {
+    state.timelineFilter = el.dataset.filter; render();
+  }));
+  document.querySelectorAll("[data-segment]").forEach(el => el.addEventListener("click", () => {
+    state.segmentSelected = el.dataset.segment; render();
+  }));
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput){
+    searchInput.addEventListener("input", (e) => {
+      state.query = e.target.value; render();
+      const el = document.getElementById("searchInput");
+      if (el){ el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
+    });
+  }
+}
+
+render();
+</script>
+</body>
+</html>
